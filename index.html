@@ -38,7 +38,7 @@ th{background:var(--card2);color:var(--mute);text-align:left;padding:11px 10px;f
 td{padding:9px 8px;border-top:1px solid var(--line);vertical-align:middle}
 tr.day td{background:#2b2710;color:var(--acc);font-weight:700;text-align:center;text-transform:capitalize;padding:8px}
 tr.proc td{background:rgba(249,200,14,.05)}
-td input[type=text]{width:100%;min-height:44px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px}td input[data-f=n]{min-width:190px}td input[data-f=dni]{min-width:120px}td input[data-f=c]{min-width:340px}
+td input[type=text]{width:100%;min-height:44px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px}td input[data-f=n]{min-width:190px;text-align:center}td input[data-f=dni]{width:96px;min-width:0;padding:12px 6px;text-align:center}th:nth-child(2),td:nth-child(2){width:1%;white-space:nowrap}select[data-f=m]{text-align:center;text-align-last:center}select.mg{background:var(--ap);color:var(--apink)}td input[data-f=c]{min-width:340px}
 td input[type=text]:hover{border-color:var(--mute)}td input[type=text]:focus{outline:2px solid var(--acc);background:var(--bg)}
 td select{width:100%;appearance:none;-webkit-appearance:none;border:0;border-radius:999px;padding:12px 16px;min-height:44px;cursor:pointer;font-weight:600;font-size:13px}
 select.m{background:var(--yel);color:var(--yelink)}select.r-ap{background:var(--ap);color:var(--apink)}select.r-de{background:var(--de);color:var(--deink)}select.r-ps{background:var(--ps);color:var(--psink)}select.m0{background:var(--card2);color:var(--ink)}select.empty{background:var(--card2);color:var(--mute);font-weight:500}
@@ -136,8 +136,8 @@ function render(){
     const is=r.i?`style="background:hsl(${hue(r.i)} 45% 28%);color:hsl(${hue(r.i)} 80% 82%)"`:"";
     h+=`<tr data-d="${r.d}" data-k="${r.key}" class="${r.p?"proc":""}">
     <td><input type="text" data-f="n" value="${esc(r.n)}" placeholder="Nombre"></td>
-    <td><input type="text" data-f="dni" inputmode="numeric" value="${esc(r.dni)}" placeholder="DNI"></td>
-    <td><select data-f="m" class="${r.m?"m":"empty"}">${opts(MODS,r.m,"—")}</select></td>
+    <td><input type="text" data-f="dni" inputmode="numeric" maxlength="8" value="${esc(r.dni)}" placeholder="DNI"></td>
+    <td><select data-f="m" class="${r.m==="Express"?"mg":r.m?"m":"empty"}">${opts(MODS,r.m,"—")}</select></td>
     <td class="ck"><input type="checkbox" data-f="p"${r.p?" checked":""}></td>
     <td><select data-f="i" class="${r.i?"":"empty"}" ${is}>${opts(ins,r.i,"Instructor")}</select></td>
     <td><select data-f="r" class="${rc}">${opts(RES,r.r,"Resultado")}</select></td>
