@@ -51,6 +51,7 @@ summary{cursor:pointer;font-weight:700;font-size:17px}
 .lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:14px}
 label{color:var(--mute);font-size:14px;display:block;margin-bottom:6px}
 textarea{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-family:ui-monospace,Menlo,Consolas,monospace}
+.banner{background:#3b3210;border:1px solid #6b5a14;color:#f9d86a;border-radius:12px;padding:12px 16px;margin-bottom:16px}.banner[hidden]{display:none}
 .note{color:var(--mute);font-size:13px;margin-top:14px}
 @media(max-width:820px){body{flex-direction:column}aside{width:100%;height:auto;position:static;flex-direction:row;align-items:center;padding:14px 16px;gap:14px;border-right:0;border-bottom:1px solid var(--line)}.logo{margin:0}.logo img{width:44px}.nl,.foot{display:none}main{padding:20px 16px 32px}h1{font-size:26px}}
 </style>
@@ -67,7 +68,8 @@ textarea{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);b
     <div><h1>Pruebas de manejo</h1><p class="sub">Registro de pruebas: asesor, instructor, resultado y quién toma al cliente.</p></div>
     <div class="badge">Sistema de pruebas</div>
   </div>
-    <div class="card">
+    <div class="banner" id="msg" hidden></div>
+  <div class="card">
     <div class="ch">
       <h2>Registro de pruebas</h2>
       <span class="pill" id="cnt"></span>
@@ -88,8 +90,7 @@ textarea{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);b
       <div><label>Quién toma al cliente (uno por línea)</label><textarea id="lt"></textarea></div>
     </div>
   </details>
-  <div class="note" id="msg"></div>
-  <div class="note">Los datos viven en una base compartida: todos los que abran esta página ven los cambios en vivo. Importar CSV reemplaza los días que trae el archivo.</div>
+    <div class="note">Los datos viven en una base compartida: todos los que abran esta página ven los cambios en vivo. Importar CSV reemplaza los días que trae el archivo.</div>
 </main>
 <script>
 const MODS=["Seña","Express","Flip"],RES=["Aprobado","No aprobado","Pasa sin prueba","No estaba","No realizó la prueba","SPM"];
@@ -98,7 +99,9 @@ let ins=["Marcos Gutierrez","Facundo Gonzalez","Gabriel Arce","Antonella Moyano"
 const D={},pend={},flushing={},known={},timers={};
 let db=null,ready=false,dirty=false,filt=today(),q="";
 const $=id=>document.getElementById(id),tb=$("tb"),li=$("li"),lt=$("lt");
-const msg=t=>$("msg").textContent=t;
+const msg=t=>{const e=$("msg");e.textContent=t;e.hidden=!t};
+const LK="pruebas-manejo-local-v2";
+function localSave(){try{localStorage.setItem(LK,JSON.stringify({D,ins,tak}))}catch(e){msg("No hay espacio para guardar en este navegador.")}}
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const opts=(list,v,ph)=>(v&&!list.includes(v)&&(list=[...list,v]),`<option value="">${ph}</option>`)+list.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");
 const hue=n=>{const k=ins.indexOf(n);return [155,0,210,280,30,330][(k<0?0:k)%6]};
@@ -106,7 +109,8 @@ const typing=()=>document.activeElement?.matches?.("#tb input[type=text]");
 function fail(e){msg(e&&e.code==="invalid_argument"?"No tenés permiso para editar esta página (solo lectura).":"No se pudo guardar: "+(e&&e.message||"error")+". Reintentá en unos segundos.")}
 function queue(d,k,f,delay=500){pend[d]=pend[d]||{};pend[d][k]={...pend[d][k],...f};clearTimeout(timers[d]);timers[d]=setTimeout(()=>flush(d),delay)}
 async function flush(d){
-  const p=pend[d];if(flushing[d]||!db||!p||!Object.keys(p).length)return;
+  const p=pend[d];if(flushing[d]||!p||!Object.keys(p).length)return;
+  if(!db){pend[d]={};const b=D[d]=D[d]||{};for(const k in p)b[k]={...b[k],...p[k]};localSave();render();return}
   flushing[d]=p;pend[d]={};const ref=db.doc("days/"+d);
   try{try{known[d]?await ref.update({rows:p}):await ref.set({rows:p})}catch(e){await ref.set({rows:p})}known[d]=true}
   catch(e){fail(e)}
@@ -148,15 +152,15 @@ tb.addEventListener("click",e=>{const b=e.target;if(b.dataset.del===undefined)re
   if(b.dataset.arm){queue(c[0],c[1],{del:true},0);render()}
   else{b.dataset.arm=1;b.textContent="¿Borrar?";b.style.fontSize="13px";b.style.color="var(--deink)";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="×";b.style.fontSize="";b.style.color=""}},3000)}});
 tb.addEventListener("focusout",()=>setTimeout(()=>{if(dirty&&!typing()){dirty=false;render()}},60));
-$("add").onclick=()=>{if(!db)return fail();q="";$("q").value="";const id=Date.now();queue(filt||today(),"r"+id,{id,n:"",dni:"",m:"Seña",p:false,i:"",r:"",c:"",t:""},0);render();const a=tb.querySelectorAll("tr[data-k]");a[a.length-1]?.querySelector("input")?.focus()};
+$("add").onclick=()=>{q="";$("q").value="";const id=Date.now();queue(filt||today(),"r"+id,{id,n:"",dni:"",m:"Seña",p:false,i:"",r:"",c:"",t:""},0);render();const a=tb.querySelectorAll("tr[data-k]");a[a.length-1]?.querySelector("input")?.focus()};
 $("fdate").onchange=e=>{filt=e.target.value;render()};
 $("all").onclick=()=>{filt="";render()};
 $("q").oninput=e=>{q=e.target.value.toLowerCase().trim();render()};
 const ls=t=>t.value.split("\n").map(s=>s.trim()).filter(Boolean);
-const saveLists=()=>{if(!db)return;db.doc("config/lists").set({ins,tak}).catch(fail)};
+const saveLists=()=>{if(!db){localSave();return}db.doc("config/lists").set({ins,tak}).catch(fail)};
 li.onchange=()=>{ins=ls(li);saveLists();render()};lt.onchange=()=>{tak=ls(lt);saveLists();render()};
 function parseCSV(t){const o=[];let r=[],f="",qt=false;for(let i=0;i<t.length;i++){const c=t[i];if(qt){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else qt=false}else f+=c}else if(c==='"')qt=true;else if(c===","){r.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;r.push(f);o.push(r);r=[];f=""}else f+=c}if(f||r.length){r.push(f);o.push(r)}return o}
-$("imp").onclick=()=>{if(!db)return fail();$("file").click()};
+$("imp").onclick=()=>$("file").click();
 $("file").onchange=async e=>{
  const file=e.target.files[0];e.target.value="";if(!file)return;
  try{
@@ -175,7 +179,7 @@ $("file").onchange=async e=>{
   if(!n){msg("No encontré pruebas en ese archivo.");return}
   const top=o=>Object.entries(o).filter(([k,v])=>k&&v>=5).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
   const keys=Object.keys(days);let done=0,fails=0;
-  const one=async d=>{for(let a=0;a<6;a++){try{await db.doc("days/"+d).set({rows:days[d]});known[d]=true;return}catch(er){if(er.code==="resource_exhausted"||er.code==="unavailable")await new Promise(r=>setTimeout(r,1200*(a+1)));else break}}fails++};
+  const one=async d=>{if(!db){D[d]=days[d];return}for(let a=0;a<6;a++){try{await db.doc("days/"+d).set({rows:days[d]});known[d]=true;return}catch(er){if(er.code==="resource_exhausted"||er.code==="unavailable")await new Promise(r=>setTimeout(r,1200*(a+1)));else break}}fails++};
   msg("Importando… 0/"+keys.length+" días");
   const queueKeys=[...keys];
   await Promise.all([0,1,2,3].map(async()=>{while(queueKeys.length){await one(queueKeys.shift());done++;if(done%10===0)msg("Importando… "+done+"/"+keys.length+" días")}}));
@@ -188,7 +192,7 @@ $("file").onchange=async e=>{
  render();
  const t=setTimeout(()=>{if(!ready)msg("Conectando con la base compartida… si tarda, revisá tu conexión.")},10000);
  try{db=await (window.claude&&window.claude.use?window.claude.use("db"):null)}catch(e){db=null}
- if(!db){clearTimeout(t);ready=true;render();msg("No se pudo conectar con la base compartida (¿abriste la página con tu sesión?). Los cambios no se guardan.");return}
+ if(!db){clearTimeout(t);try{const x=JSON.parse(localStorage.getItem(LK)||"null");if(x){Object.assign(D,x.D||{});ins=x.ins||ins;tak=x.tak||tak}}catch(e){}li.value=ins.join("\n");lt.value=tak.join("\n");ready=true;render();msg("Modo local: no hay conexión con la base compartida, así que lo que cargues se guarda solo en este navegador. Abrí el link de la página directamente (no desde una vista previa del chat) para usar la base compartida.");return}
  db.collection("days").onSnapshot(s=>{
   for(const ch of s.docChanges()){const id=ch.doc.id;if(ch.type==="removed"){delete D[id];known[id]=false}else{D[id]=(ch.doc.data()||{}).rows||{};known[id]=true}}
   ready=true;clearTimeout(t);if(typing())dirty=true;else render();
