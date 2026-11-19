@@ -33,19 +33,19 @@ input,select,button,textarea{font:inherit;color:var(--ink)}
 .btn{cursor:pointer;font-weight:700}.btn:hover{border-color:var(--mute)}
 .btn.p{background:var(--acc)!important;color:var(--accink)!important;border-color:var(--acc)!important}
 .tw{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:1300px}
-th{background:var(--card2);color:var(--mute);text-align:left;padding:11px 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
-td{padding:9px 8px;border-top:1px solid var(--line);vertical-align:middle}
+table{border-collapse:collapse;width:100%;table-layout:fixed}
+th{background:var(--card2);color:var(--mute);text-align:left;padding:9px 6px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;font-weight:700}
+td{padding:6px 5px;border-top:1px solid var(--line);vertical-align:middle}
 tr.day td{background:#2b2710;color:var(--acc);font-weight:700;text-align:center;text-transform:capitalize;padding:8px}
 tr.proc td{background:rgba(249,200,14,.05)}
-td input[type=text]{width:100%;min-height:44px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px}td input[data-f=n]{min-width:190px;text-align:center}td input[data-f=dni]{width:96px;min-width:0;padding:12px 6px;text-align:center}th:nth-child(2),td:nth-child(2){width:1%;white-space:nowrap}select[data-f=m]{text-align:center;text-align-last:center}select.mg{background:var(--ap);color:var(--apink)}td input[data-f=c]{min-width:340px}
+td input[type=text]{width:100%;min-height:36px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:12px}td input[data-f=n]{text-align:center}td input[data-f=dni]{text-align:center;padding:8px 2px}th:nth-child(1){width:17%}th:nth-child(2){width:82px}th:nth-child(3){width:86px}th:nth-child(4){width:56px}th:nth-child(5){width:12%}th:nth-child(6){width:12%}th:nth-child(8){width:12%}th:nth-child(9){width:30px}select[data-f=m]{text-align:center;text-align-last:center}select.mg{background:var(--ap);color:var(--apink)}
 td input[type=text]:hover{border-color:var(--mute)}td input[type=text]:focus{outline:2px solid var(--acc);background:var(--bg)}
-td select{width:100%;appearance:none;-webkit-appearance:none;border:0;border-radius:999px;padding:12px 16px;min-height:44px;cursor:pointer;font-weight:600;font-size:13px}
+td select{width:100%;appearance:none;-webkit-appearance:none;border:0;border-radius:999px;padding:8px 8px;min-height:36px;cursor:pointer;font-weight:600;font-size:12px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 select.m{background:var(--yel);color:var(--yelink)}select.r-ap{background:var(--ap);color:var(--apink)}select.r-de{background:var(--de);color:var(--deink)}select.r-ps{background:var(--ps);color:var(--psink)}select.m0{background:var(--card2);color:var(--ink)}select.empty{background:var(--card2);color:var(--mute);font-weight:500}
 select option{background:var(--card);color:var(--ink)}
-td.ck{text-align:center}td.ck input{width:21px;height:21px;accent-color:var(--acc);cursor:pointer}
+td.ck{text-align:center}td.ck input{width:18px;height:18px;accent-color:var(--acc);cursor:pointer}
 @keyframes fl{from{background:rgba(249,200,14,.35)}to{background:transparent}}tr.flash td{animation:fl 1.8s}
-.x{border:0;background:none;color:var(--mute);cursor:pointer;font-size:20px}.x:hover{color:var(--deink)}
+.x{border:0;background:none;color:var(--mute);cursor:pointer;font-size:18px;padding:0}.x:hover{color:var(--deink)}
 .es{padding:44px;text-align:center;color:var(--mute)}
 details{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 22px}
 summary{cursor:pointer;font-weight:700;font-size:17px}
@@ -57,6 +57,7 @@ textarea{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);b
 @media(max-width:820px){body{flex-direction:column}aside{width:100%;height:auto;position:static;flex-direction:row;align-items:center;padding:14px 16px;gap:14px;border-right:0;border-bottom:1px solid var(--line)}.logo{margin:0}.logo img{width:44px}.nl,.foot{display:none}main{padding:20px 16px 32px}h1{font-size:26px}}
 
 .view[hidden]{display:none}
+@media(max-width:900px){table{table-layout:auto;min-width:900px}}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2b2d35;color:#fff;border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}#toast.show{opacity:1}
 @media(max-width:820px){.navs{display:flex;gap:6px;overflow-x:auto}.nav{padding:8px 10px;margin:0;white-space:nowrap}.nav span{display:none}}
 .tools{--bg:#191a1f;--panel:#202127;--panel2:#18191e;--line:#353740;--muted:#a3a5b0;--yellow:#ffc400;--blue:#4da3ff;--green:#16a05a;--red:#ff4545;font-size:14px}
@@ -147,9 +148,10 @@ textarea{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);b
   <div class="crumb">Herramientas</div>
   <div class="head">
     <div><h1>Pruebas de manejo</h1><p class="sub">Registro de pruebas: asesor, instructor, resultado y quién toma al cliente.</p></div>
-    <div class="badge">Sistema de pruebas</div>
+    <div class="badge" id="dbst">Sistema de pruebas</div>
   </div>
-    <div class="banner" id="msg" hidden></div>
+    <div class="banner" id="dbb" hidden></div>
+  <div class="banner" id="msg" hidden></div>
   <div class="card">
     <div class="ch">
       <h2>Registro de pruebas</h2>
@@ -348,14 +350,26 @@ $("file").onchange=async e=>{
   msg("Importadas "+n+" pruebas ("+keys.length+" días)."+(fails?" Fallaron "+fails+" días: volvé a importar.":""));
  }catch(err){msg("No pude leer el archivo.")}
 };
+async function diagnose(){
+ const b=$("dbb");$("dbst").textContent="● Sin base compartida";b.hidden=false;b.textContent="";
+ const sp=document.createElement("span");b.appendChild(sp);
+ let P=null,st="unavailable";
+ try{P=await claude.use("permissions");if(P)st=await P.state("db")}catch(e){}
+ const base="Sin conexión con la base compartida: lo que cargues NO se guarda para el resto. ";
+ const btn=(t,fn)=>{const x=document.createElement("button");x.className="btn p";x.textContent=t;x.style.cssText="margin-left:12px;padding:8px 14px;border-radius:8px;border:0;cursor:pointer";x.onclick=fn;b.appendChild(x)};
+ if(window.parent===window)sp.textContent=base+"Abrí la página desde el link de claude.ai, no como página suelta.";
+ else if(st==="prompt"){sp.textContent=base+"Falta tu permiso para guardar datos.";btn("Dar permiso",async()=>{try{await P.request(["db"])}catch(e){}location.reload()})}
+ else if(st==="denied"){sp.textContent=base+"El permiso está desactivado.";btn("Abrir permisos",()=>{P&&P.manage().catch(()=>{})})}
+ else sp.textContent=base+"No está disponible en esta vista (estado: "+st+"). Recargá la página; si sigue igual, avisame.";
+}
 (async()=>{
  render();
  const t=setTimeout(()=>{if(!ready)msg("Conectando con la base compartida… si tarda, revisá tu conexión.")},10000);
  try{db=await (window.claude&&window.claude.use?window.claude.use("db"):null)}catch(e){db=null}
- if(!db){clearTimeout(t);try{const x=JSON.parse(localStorage.getItem(LK)||"null");if(x){Object.assign(D,x.D||{});ins=x.ins||ins;tak=x.tak||tak}}catch(e){}li.value=ins.join("\n");lt.value=tak.join("\n");ready=true;render();msg("Modo local: no hay conexión con la base compartida, así que lo que cargues se guarda solo en este navegador. Abrí el link de la página directamente (no desde una vista previa del chat) para usar la base compartida.");return}
+ if(!db){clearTimeout(t);try{const x=JSON.parse(localStorage.getItem(LK)||"null");if(x){Object.assign(D,x.D||{});ins=x.ins||ins;tak=x.tak||tak}}catch(e){}li.value=ins.join("\n");lt.value=tak.join("\n");ready=true;render();diagnose();return}
  db.collection("days").onSnapshot(s=>{
   for(const ch of s.docChanges()){const id=ch.doc.id;if(ch.type==="removed"){delete D[id];known[id]=false}else{D[id]=(ch.doc.data()||{}).rows||{};known[id]=true}}
-  ready=true;clearTimeout(t);if(typing())dirty=true;else render();
+  ready=true;clearTimeout(t);$("dbst").textContent="● Base compartida conectada";if(typing())dirty=true;else render();
  },fail);
  db.doc("config/lists").onSnapshot(s=>{const v=s.exists&&s.data();if(v){if(Array.isArray(v.ins))ins=v.ins;if(Array.isArray(v.tak))tak=v.tak}
   if(document.activeElement!==li)li.value=ins.join("\n");if(document.activeElement!==lt)lt.value=tak.join("\n");if(ready&&!typing())render()},fail);
