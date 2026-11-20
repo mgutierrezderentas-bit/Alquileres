@@ -172,7 +172,7 @@ tr.dayg td{background:#3f6d2d;color:#fff;font-weight:700;text-transform:capitali
       <input type="date" id="fdate" title="Fecha">
       <button class="btn" id="all">Ver todas</button>
       <input type="search" id="q" placeholder="Buscar nombre o DNI…">
-      <button class="btn" id="imp">Importar CSV</button><input type="file" id="file" accept=".csv,text/csv" hidden>
+      <button class="btn" id="imp" title="Podés elegir los dos CSV a la vez (pruebas y entregas)">Importar CSV</button><input type="file" id="file" accept=".csv,text/csv" multiple hidden>
       <button class="btn p" id="add">＋ Nueva prueba</button>
     </div>
     <div class="tw"><table>
@@ -186,10 +186,10 @@ tr.dayg td{background:#3f6d2d;color:#fff;font-weight:700;text-transform:capitali
       <div><label>Quién toma al cliente (uno por línea)</label><textarea id="lt"></textarea></div>
     </div>
   </details>
-    <div class="note">Los datos viven en una base compartida: todos los que abran esta página ven los cambios en vivo. Importar CSV reemplaza los días que trae el archivo.</div>
+    <div class="note">Los datos viven en una base compartida: todos los que abran esta página ven los cambios en vivo. Importar CSV reemplaza los días (Pruebas) o semanas (Entregas) que trae el archivo. Podés subir los dos CSV a la vez: el que se llame «pruebas» va a Pruebas y el que se llame «entregas» va a Entregas.</div>
 </section>
 <section id="v-entregas" class="view" hidden><div class="crumb">Herramientas</div><div class="head"><div><h1>Entregas</h1><p class="sub">Registro de entregas: patente, cliente, estado, responsable y logística.</p></div><div class="badge">Sistema de entregas</div></div>
-<div class="card"><div class="ch"><h2>Registro de entregas</h2><span class="pill" id="ecount"></span><button class="btn" id="eprev" title="Día anterior">◀</button><input type="date" id="edate"><button class="btn" id="enext" title="Día siguiente">▶</button><button class="btn" id="etoday">Hoy</button><button class="btn" id="eall">Ver todas</button><input type="search" id="eq" placeholder="Buscar patente, cliente…"><button class="btn p" id="eadd">＋ Nueva entrega</button></div>
+<div class="banner" id="emsg" hidden></div><div class="card"><div class="ch"><h2>Registro de entregas</h2><span class="pill" id="ecount"></span><button class="btn" id="eprev" title="Día anterior">◀</button><input type="date" id="edate"><button class="btn" id="enext" title="Día siguiente">▶</button><button class="btn" id="etoday">Hoy</button><button class="btn" id="eall">Ver todas</button><input type="search" id="eq" placeholder="Buscar patente, cliente…"><button class="btn" id="eimp" title="Podés elegir los dos CSV a la vez (pruebas y entregas)">Importar CSV</button><button class="btn p" id="eadd">＋ Nueva entrega</button></div>
 <div class="tw"><table class="etable"><colgroup><col style="width:84px"><col style="width:46px"><col style="width:74px"><col style="width:11%"><col style="width:15%"><col style="width:90px"><col style="width:74px"><col style="width:102px"><col style="width:76px"><col style="width:66px"><col style="width:100px"><col><col style="width:24px"></colgroup><thead><tr class="g"><th colspan="3"></th><th class="red">Fórmula</th><th colspan="3"></th><th class="red" colspan="3">Solo si es cambio de unidad</th><th colspan="3"></th></tr><tr><th>Fecha</th><th>Hora</th><th>Patente</th><th>Modelo</th><th>Cliente</th><th>Estado</th><th>Tipo</th><th>Motivo de cambio</th><th>Patente anterior</th><th>Monto</th><th>Responsable</th><th>Logística</th><th></th></tr></thead><tbody id="etb"></tbody></table></div></div>
 <details><summary>Lista de responsables</summary><div class="lists"><div><label>Responsables (uno por línea)</label><textarea id="rl"></textarea></div></div></details></section>
 <section id="v-comparador" class="view" hidden><div class="crumb">Herramientas</div><div class="head"><div><h1>Comparador de patentes</h1><p class="sub">Comparador de patentes y analizador de listas.</p></div><div class="badge">Sistema de análisis</div></div><div class="tools"><div class="grid"><section class="panel"><div class="panel-head"><h2>Lista autos Cuyo</h2><span class="pill" id="countA">0 patentes</span></div><div class="panel-body"><p class="hint">Pegá la lista completa. Los datos entre paréntesis se ignoran y solo se toman patentes que empiecen con AG, AH, AI o AJ.</p><textarea id="l1" placeholder="Pegá acá las patentes de Cuyo..."></textarea><div class="actions"><button class="secondary" onclick="copyText('l1')">▣ Copiar lista</button><button class="secondary" onclick="clearOne('l1')">Limpiar</button></div></div></section>
@@ -278,7 +278,7 @@ let ins=["Marcos Gutierrez","Facundo Gonzalez","Gabriel Arce","Antonella Moyano"
 const D={},pend={},flushing={},known={},timers={};
 let db=null,ready=false,dirty=false,filt=today(),q="";
 const $=id=>document.getElementById(id),tb=$("tb"),li=$("li"),lt=$("lt");
-const msg=t=>{const e=$("msg");e.textContent=t;e.hidden=!t};
+const msg=t=>{for(const id of ["msg","emsg"]){const e=$(id);if(e){e.textContent=t;e.hidden=!t}}};
 const LK="pruebas-manejo-local-v2";
 function localSave(){try{localStorage.setItem(LK,JSON.stringify({D,ins,tak}))}catch(e){msg("No hay espacio para guardar en este navegador.")}}
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -339,34 +339,59 @@ const ls=t=>t.value.split("\n").map(s=>s.trim()).filter(Boolean);
 const saveLists=()=>{if(!db){localSave();return}db.doc("config/lists").set({ins,tak}).catch(fail)};
 li.onchange=()=>{ins=ls(li);saveLists();render()};lt.onchange=()=>{tak=ls(lt);saveLists();render()};
 function parseCSV(t){const o=[];let r=[],f="",qt=false;for(let i=0;i<t.length;i++){const c=t[i];if(qt){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else qt=false}else f+=c}else if(c==='"')qt=true;else if(c===","){r.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;r.push(f);o.push(r);r=[];f=""}else f+=c}if(f||r.length){r.push(f);o.push(r)}return o}
-$("imp").onclick=()=>$("file").click();
-$("file").onchange=async e=>{
- const file=e.target.files[0];e.target.value="";if(!file)return;
- try{
-  const rows=parseCSV((await file.text()).replace(/^\uFEFF/,""));
+const KIND=(name,rows)=>{const n=name.toLowerCase();if(n.includes("entregas"))return"e";if(n.includes("pruebas"))return"p";const h=(rows[1]||[]).join("|").toLowerCase();if(h.includes("modalidad")||h.includes("dni"))return"p";if(h.includes("patente")||h.includes("cliente"))return"e";return null};
+async function pool(items,fn,n=4){const q=[...items];await Promise.all(Array.from({length:n},async()=>{while(q.length)await fn(q.shift())}))}
+async function setDoc(path,data){for(let a=0;a<6;a++){try{await db.doc(path).set(data);return true}catch(er){if(er&&(er.code==="resource_exhausted"||er.code==="unavailable"))await new Promise(r=>setTimeout(r,1200*(a+1)));else return false}}return false}
+const goodDate=(y,mo,da)=>{const t=new Date(y,mo-1,da);return t.getMonth()===mo-1&&t.getDate()===da&&y>=2024&&y<=2030};
+const topN=o=>Object.entries(o).filter(([k,v])=>k&&v>=5).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+async function importP(rows){
   const re=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
   const RM={"no estaba.":"No estaba","no estaba":"No estaba","no realizo la prueba":"No realizó la prueba","no aprobado":"No aprobado","aprobado":"Aprobado","pasa sin prueba":"Pasa sin prueba","spm":"SPM"};
   const MM={flip:"Flip",express:"Express","seña":"Seña"};
   const days={},ci={},ti={};let id=Date.now(),n=0;
   for(const r of rows){const m=re.exec((r[0]||"").trim());if(!m)continue;
-   const nm=(r[1]||"").trim(),dni=(r[2]||"").trim(),c=(r[7]||"").trim();if(!nm&&!dni&&!c)continue;
-   const rs=(r[6]||"").trim(),md=(r[3]||"").trim(),i=(r[5]||"").trim();let t=(r[8]||"").trim();if(t==="FALSE")t="";
-   ci[i]=(ci[i]||0)+1;ti[t]=(ti[t]||0)+1;
-   const d=m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");id++;n++;
-   (days[d]=days[d]||{})["r"+id]={id,n:nm,dni,m:MM[md.toLowerCase()]||md,p:(r[4]||"").trim().toUpperCase()==="TRUE",i,r:RM[rs.toLowerCase()]||rs,c,t};
+    const y=+m[3],mo=+m[2],da=+m[1];if(!goodDate(y,mo,da))continue;
+    const nm=(r[1]||"").trim(),dni=(r[2]||"").trim(),c=(r[7]||"").trim();if(!nm&&!dni&&!c)continue;
+    const rs=(r[6]||"").trim(),md=(r[3]||"").trim(),i=(r[5]||"").trim();let t=(r[8]||"").trim();if(t==="FALSE")t="";
+    ci[i]=(ci[i]||0)+1;ti[t]=(ti[t]||0)+1;
+    const d=y+"-"+pad2(mo)+"-"+pad2(da);id++;n++;
+    (days[d]=days[d]||{})["r"+id]={id,n:nm,dni,m:MM[md.toLowerCase()]||md,p:(r[4]||"").trim().toUpperCase()==="TRUE",i,r:RM[rs.toLowerCase()]||rs,c,t};
   }
-  if(!n){msg("No encontré pruebas en ese archivo.");return}
-  const top=o=>Object.entries(o).filter(([k,v])=>k&&v>=5).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+  if(!n)return "Pruebas: no encontré filas";
   const keys=Object.keys(days);let done=0,fails=0;
-  const one=async d=>{if(!db){D[d]=days[d];return}for(let a=0;a<6;a++){try{await db.doc("days/"+d).set({rows:days[d]});known[d]=true;return}catch(er){if(er.code==="resource_exhausted"||er.code==="unavailable")await new Promise(r=>setTimeout(r,1200*(a+1)));else break}}fails++};
-  msg("Importando… 0/"+keys.length+" días");
-  const queueKeys=[...keys];
-  await Promise.all([0,1,2,3].map(async()=>{while(queueKeys.length){await one(queueKeys.shift());done++;if(done%10===0)msg("Importando… "+done+"/"+keys.length+" días")}}));
-  ins=top(ci);tak=top(ti);li.value=ins.join("\n");lt.value=tak.join("\n");saveLists();
+  await pool(keys,async d=>{if(!db){D[d]=days[d]}else if(await setDoc("days/"+d,{rows:days[d]}))known[d]=true;else fails++;done++;if(done%10===0)msg("Importando Pruebas… "+done+"/"+keys.length+" días")});
+  ins=topN(ci);tak=topN(ti);li.value=ins.join("\n");lt.value=tak.join("\n");saveLists();
   filt=keys.reduce((a,d)=>d>a?d:a,"");render();
-  msg("Importadas "+n+" pruebas ("+keys.length+" días)."+(fails?" Fallaron "+fails+" días: volvé a importar.":""));
- }catch(err){msg("No pude leer el archivo.")}
-};
+  return "Pruebas: "+n+" ("+keys.length+" días)"+(fails?", fallaron "+fails+" días":"");
+}
+async function importE(rows){
+  if(!db||!ES)return "Entregas: necesita la base compartida";
+  const re=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,sh={},rc={};let n=0,latest="";
+  rows.forEach((r,i)=>{const m=re.exec((r[0]||"").trim());if(!m)return;
+    let y=+m[3];const mo=+m[2],da=+m[1];if(y===206||y===2025)y=2026;if(!goodDate(y,mo,da))return;
+    const c=j=>(r[j]||"").trim(),d=y+"-"+pad2(mo)+"-"+pad2(da);
+    const f={h:c(1),pat:c(2).toUpperCase(),mod:c(3),cli:c(4),est:c(5),tip:c(6),mot:c(7),pa:c(8),mon:c(9),res:c(10),log:c(11),d,o:i-1};
+    if(!f.pat&&!f.cli&&!f.mod)return;
+    const k=shard(d);(sh[k]=sh[k]||{})["r"+f.o]=f;rc[f.res]=(rc[f.res]||0)+1;n++;if(d>latest)latest=d;
+  });
+  if(!n)return "Entregas: no encontré filas";
+  const keys=Object.keys(sh);let done=0,fails=0;
+  await pool(keys,async k=>{if(await setDoc("deliveries/"+k,{rows:sh[k]}))ES.known[k]=true;else fails++;done++;msg("Importando Entregas… "+done+"/"+keys.length+" semanas")});
+  const nr=topN(rc);if(nr.length){resp=nr;$("rl").value=resp.join("\n");db.doc("config/entregas").set({resp}).catch(()=>{})}
+  efilt=latest;erender();
+  return "Entregas: "+n+" ("+keys.length+" semanas)"+(fails?", fallaron "+fails:"");
+}
+async function importFiles(files){
+  const out=[];
+  for(const f of files){
+    try{const rows=parseCSV((await f.text()).replace(/^\uFEFF/,"")),k=KIND(f.name,rows);
+      out.push(k==="p"?await importP(rows):k==="e"?await importE(rows):f.name+": no sé si es de pruebas o entregas (el nombre del archivo debe incluir «pruebas» o «entregas»)")}
+    catch(err){out.push(f.name+": no pude leerlo")}
+  }
+  msg("Importado → "+out.join(" · "));
+}
+$("file").onchange=e=>{const fl=[...e.target.files];e.target.value="";if(fl.length)importFiles(fl)};
+$("imp").onclick=()=>$("file").click();$("eimp").onclick=()=>$("file").click();
 
 const EST=["Entregado","Asignado","Reservado","No asignado","No asignar","EDC","Esperando"],TIP=["Nuevo","Cambio","Mujeres","MESSIRVE","Uber"],MOT=["RTO","Provisoria","Taller","Otros","Doble contrato","Venta","Consumo","Flip"];
 const KN=new Set([...EST,...TIP,...MOT].map(x=>x.toLowerCase()));
