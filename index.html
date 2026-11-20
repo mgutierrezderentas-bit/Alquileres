@@ -57,6 +57,7 @@ textarea{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);b
 @media(max-width:820px){body{flex-direction:column}aside{width:100%;height:auto;position:static;flex-direction:row;align-items:center;padding:14px 16px;gap:14px;border-right:0;border-bottom:1px solid var(--line)}.logo{margin:0}.logo img{width:44px}.nl,.foot{display:none}main{padding:20px 16px 32px}h1{font-size:26px}}
 
 .view[hidden]{display:none}
+tr.dayg:not(.sel) td{background:#2c4a22}tr.day:not(.sel) td{background:#1c190b;color:var(--mute)}
 .sbimp{margin-top:18px;text-align:center}.sbimp button{width:100%;padding:10px 4px;border-radius:10px;border:0;font-size:12px;cursor:pointer;font-weight:700}
 .sbimp .hint{font-size:10px;color:var(--mute);margin-top:6px;line-height:1.35}
 td.dgc{position:relative}td.dgc input[type=text]{padding-left:15px!important}
@@ -175,7 +176,7 @@ tr.dayg td{background:#3f6d2d;color:#fff;font-weight:700;text-transform:capitali
     <div class="ch">
       <h2>Registro de pruebas</h2>
       <span class="pill" id="cnt"></span>
-      <input type="date" id="fdate" title="Fecha">
+      <button class="btn" id="pprev" title="Día anterior">◀</button><input type="date" id="fdate" title="Fecha"><button class="btn" id="pnext" title="Día siguiente">▶</button>
       <button class="btn" id="all">Ver todas</button>
       <input type="search" id="q" placeholder="Buscar nombre o DNI…">
       
@@ -292,7 +293,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const opts=(list,v,ph)=>(v&&!list.includes(v)&&(list=[...list,v]),`<option value="">${ph}</option>`)+list.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");
 const hue=n=>{const k=ins.indexOf(n);return [155,0,210,280,30,330][(k<0?0:k)%6]};
 const typing=()=>document.activeElement?.matches?.("#tb input[type=text]");
-function fail(e){msg(e&&e.code==="invalid_argument"?"No tenés permiso para editar esta página (solo lectura).":"No se pudo guardar: "+(e&&e.message||"error")+". Reintentá en unos segundos.")}
+function fail(e){const c=(e&&(e.code||e.message))||"error";msg(e&&e.code==="invalid_argument"?"No se pudo guardar ("+c+"): puede ser un dato demasiado grande o falta de permiso de edición.":"No se pudo guardar ("+c+"). Reintentá en unos segundos.")}
 function queue(d,k,f,delay=500){pend[d]=pend[d]||{};pend[d][k]={...pend[d][k],...f};clearTimeout(timers[d]);timers[d]=setTimeout(()=>flush(d),delay)}
 async function flush(d){
   const p=pend[d];if(flushing[d]||!p||!Object.keys(p).length)return;
@@ -309,17 +310,17 @@ function rowsOf(d){
 function render(){
   $("fdate").value=filt||"";
   if(!ready){tb.innerHTML='<tr><td colspan="9" class="es">Cargando…</td></tr>';return}
-  const ds=filt?[filt]:[...new Set([...Object.keys(D),...Object.keys(pend)])];
-  let rows=ds.flatMap(rowsOf).filter(r=>!q||((r.n||"")+" "+(r.dni||"")).toLowerCase().includes(q));
+  const d3=filt?[addD(filt,-1),filt,addD(filt,1)]:null;
+  const ds=d3||[...new Set([...Object.keys(D),...Object.keys(pend)])];
+  const rows=ds.flatMap(rowsOf).filter(r=>!q||((r.n||"")+" "+(r.dni||"")).toLowerCase().includes(q));
   rows.sort((a,b)=>a.d.localeCompare(b.d)||a.id-b.id);
-  const shown=rows.length>300?rows.slice(-300):rows,c=k=>rows.filter(r=>r.r===k).length;
-  $("cnt").textContent=rows.length+(rows.length===1?" prueba":" pruebas")+(rows.length>300?" · mostrando las últimas 300":"");
-  let h="",last="";
-  for(const r of shown){
-    if(r.d!==last){last=r.d;h+=`<tr class="day" data-d="${r.d}"><td colspan="9">${new Date(r.d+"T12:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"numeric"})}</td></tr>`}
+  const shown=rows.length>300?rows.slice(-300):rows;
+  const total=Object.values(D).reduce((n,x)=>n+Object.keys(x).length,0);
+  $("cnt").textContent=rows.length+(rows.length===1?" prueba":" pruebas")+(d3?" · día anterior, elegido y próximo":"")+(rows.length>300?" · últimas 300":"")+" · en la base: "+total;
+  const rowP=r=>{
     const rc=r.r==="Aprobado"?"r-ap":r.r==="No aprobado"?"r-de":(r.r==="Pasa sin prueba"||r.r==="SPM")?"r-ps":r.r?"m0":"empty";
     const is=r.i?`style="background:hsl(${hue(r.i)} 45% 28%);color:hsl(${hue(r.i)} 80% 82%)"`:"";
-    h+=`<tr data-d="${r.d}" data-k="${r.key}" class="${r.p?"proc":""}">
+    return `<tr data-d="${r.d}" data-k="${r.key}" class="${r.p?"proc":""}">
     <td class="dgc"><span class="dg" draggable="true" title="Arrastrá para mover la fila">⋮⋮</span><input type="text" data-f="n" value="${esc(r.n)}" placeholder="Nombre"></td>
     <td><input type="text" data-f="dni" inputmode="numeric" maxlength="8" value="${esc(r.dni)}" placeholder="DNI"></td>
     <td><select data-f="m" class="${r.m==="Express"?"mg":r.m?"m":"empty"}">${opts(MODS,r.m,"—")}</select></td>
@@ -328,7 +329,10 @@ function render(){
     <td><select data-f="r" class="${rc}">${opts(RES,r.r,"Resultado")}</select></td>
     <td><input type="text" data-f="c" value="${esc(r.c)}" placeholder="Comentario"></td>
     <td><select data-f="t" class="${r.t?"m":"empty"}">${opts(tak,r.t,"Quién toma")}</select></td>
-    <td><button class="x" data-del title="Eliminar">×</button></td></tr>`}
+    <td><button class="x" data-del title="Eliminar">×</button></td></tr>`};
+  const groups=d3?d3.map(d=>[d,shown.filter(r=>r.d===d)]):groupBy(shown);
+  let h="";
+  for(const [d,rs] of groups)h+=`<tr class="day${d===filt?" sel":""}" data-d="${d}"><td colspan="9">${dayLabel(d)}${rs.length?"":" · sin pruebas"}</td></tr>`+rs.map(rowP).join("");
   tb.innerHTML=h||`<tr><td colspan="9" class="es">No hay pruebas para mostrar. Tocá “Nueva prueba” o importá tu CSV.</td></tr>`;
 }
 const ctx=e=>{const tr=e.target.closest("tr");return tr&&tr.dataset.k?[tr.dataset.d,tr.dataset.k]:null};
@@ -347,8 +351,9 @@ const saveLists=()=>{if(!db){localSave();return}db.doc("config/lists").set({ins,
 li.onchange=()=>{ins=ls(li);saveLists();render()};lt.onchange=()=>{tak=ls(lt);saveLists();render()};
 function parseCSV(t){const o=[];let r=[],f="",qt=false;for(let i=0;i<t.length;i++){const c=t[i];if(qt){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else qt=false}else f+=c}else if(c==='"')qt=true;else if(c===","){r.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;r.push(f);o.push(r);r=[];f=""}else f+=c}if(f||r.length){r.push(f);o.push(r)}return o}
 const KIND=(name,rows)=>{const n=name.toLowerCase();if(n.includes("entregas"))return"e";if(n.includes("pruebas"))return"p";const h=(rows[1]||[]).join("|").toLowerCase();if(h.includes("modalidad")||h.includes("dni"))return"p";if(h.includes("patente")||h.includes("cliente"))return"e";return null};
-async function pool(items,fn,n=4){const q=[...items];await Promise.all(Array.from({length:n},async()=>{while(q.length)await fn(q.shift())}))}
-async function setDoc(path,data){for(let a=0;a<6;a++){try{await db.doc(path).set(data);return true}catch(er){if(er&&(er.code==="resource_exhausted"||er.code==="unavailable"))await new Promise(r=>setTimeout(r,1200*(a+1)));else return false}}return false}
+async function pool(items,fn,n=3){const q=[...items];await Promise.all(Array.from({length:n},async()=>{while(q.length)await fn(q.shift())}))}
+let lastErr="";
+async function setDoc(path,data){for(let a=0;a<6;a++){try{await db.doc(path).set(data);return true}catch(er){lastErr=(er&&(er.code||er.message))||"error";if(er&&(er.code==="resource_exhausted"||er.code==="unavailable"))await new Promise(r=>setTimeout(r,1200*(a+1)));else return false}}return false}
 const goodDate=(y,mo,da)=>{const t=new Date(y,mo-1,da);return t.getMonth()===mo-1&&t.getDate()===da&&y>=2024&&y<=2030};
 const topN=o=>Object.entries(o).filter(([k,v])=>k&&v>=5).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
 async function importP(rows){
@@ -369,7 +374,7 @@ async function importP(rows){
   await pool(keys,async d=>{if(!db){D[d]=days[d]}else if(await setDoc("days/"+d,{rows:days[d]}))known[d]=true;else fails++;done++;if(done%10===0)msg("Importando Pruebas… "+done+"/"+keys.length+" días")});
   ins=topN(ci);tak=topN(ti);li.value=ins.join("\n");lt.value=tak.join("\n");saveLists();
   filt=keys.reduce((a,d)=>d>a?d:a,"");render();
-  return "Pruebas: "+n+" ("+keys.length+" días)"+(fails?", fallaron "+fails+" días":"");
+  return "Pruebas: "+n+" ("+keys.length+" días)"+(fails?", fallaron "+fails+" días ("+lastErr+")":"");
 }
 async function importE(rows){
   if(!db||!ES)return "Entregas: necesita la base compartida";
@@ -386,7 +391,7 @@ async function importE(rows){
   await pool(keys,async k=>{if(await setDoc("deliveries/"+k,{rows:sh[k]}))ES.known[k]=true;else fails++;done++;msg("Importando Entregas… "+done+"/"+keys.length+" semanas")});
   const nr=topN(rc);if(nr.length){resp=nr;$("rl").value=resp.join("\n");db.doc("config/entregas").set({resp}).catch(()=>{})}
   efilt=latest;erender();
-  return "Entregas: "+n+" ("+keys.length+" semanas)"+(fails?", fallaron "+fails:"");
+  return "Entregas: "+n+" ("+keys.length+" semanas)"+(fails?", fallaron "+fails+" ("+lastErr+")":"");
 }
 async function importFiles(files){
   const out=[];
@@ -405,6 +410,9 @@ const KN=new Set([...EST,...TIP,...MOT].map(x=>x.toLowerCase()));
 let resp=[],ES=null,eready=false,edirty=false,efilt=today(),eq="";
 const slug=v=>v?(KN.has(v.toLowerCase())?"p-"+v.toLowerCase().replace(/ /g,"_"):"m0"):"empty";
 const pad2=n=>String(n).padStart(2,"0");
+const addD=(d,n)=>{const t=new Date(d+"T12:00");t.setDate(t.getDate()+n);return isoD(t)};
+const dayLabel=d=>new Date(d+"T12:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"numeric"});
+const groupBy=rows=>{const g=[];for(const r of rows){const l=g[g.length-1];if(l&&l[0]===r.d)l[1].push(r);else g.push([r.d,[r]])}return g};
 const isoD=t=>t.getFullYear()+"-"+pad2(t.getMonth()+1)+"-"+pad2(t.getDate());
 const shard=d=>{const t=new Date(d+"T12:00");t.setDate(t.getDate()-(t.getDay()+6)%7);return isoD(t)};
 const fmtD=d=>d.split("-").reverse().join("/");
@@ -428,19 +436,21 @@ function erender(){
   const tb=$("etb");$("edate").value=efilt||"";
   if(!eready){tb.innerHTML='<tr><td colspan="13" class="es">Cargando…</td></tr>';return}
   if(!ES){tb.innerHTML='<tr><td colspan="13" class="es">Sin conexión con la base compartida: no se pueden mostrar las entregas.</td></tr>';return}
-  const shs=efilt?[shard(efilt)]:[...new Set([...Object.keys(ES.D),...Object.keys(ES.pend)])];
-  const rows=shs.flatMap(s=>ES.rowsOf(s)).filter(r=>(!efilt||r.d===efilt)&&(!eq||((r.pat||"")+" "+(r.cli||"")+" "+(r.pa||"")+" "+(r.res||"")).toLowerCase().includes(eq)));
+  const d3=efilt?[addD(efilt,-1),efilt,addD(efilt,1)]:null;
+  const shs=d3?[...new Set(d3.map(shard))]:[...new Set([...Object.keys(ES.D),...Object.keys(ES.pend)])];
+  const rows=shs.flatMap(x=>ES.rowsOf(x)).filter(r=>(!d3||d3.includes(r.d))&&(!eq||((r.pat||"")+" "+(r.cli||"")+" "+(r.pa||"")+" "+(r.res||"")).toLowerCase().includes(eq)));
   rows.sort((a,b)=>a.d.localeCompare(b.d)||a.o-b.o);
   const shown=rows.length>300?rows.slice(-300):rows;
-  $("ecount").textContent=rows.length+(rows.length===1?" entrega":" entregas")+(rows.length>300?" · mostrando las últimas 300":"");
-  let h="",last="";
-  for(const r of shown){
-    if(r.d!==last){last=r.d;h+=`<tr class="dayg" data-d="${r.d}"><td colspan="13">${new Date(r.d+"T12:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"numeric"})}</td></tr>`}
+  const total=Object.values(ES.D).reduce((n,x)=>n+Object.keys(x).length,0);
+  $("ecount").textContent=rows.length+(rows.length===1?" entrega":" entregas")+(d3?" · día anterior, elegido y próximo":"")+(rows.length>300?" · últimas 300":"")+" · en la base: "+total;
+  const rowE=r=>{
     const t=(f,x="")=>`<td><input type="text" data-f="${f}" value="${esc(r[f])}"${x}></td>`;
-    const s=(f,list,ph)=>`<td><select data-f="${f}" class="${slug(r[f])}">${opts(list,r[f],ph)}</select></td>`;
+    const sl=(f,list,ph)=>`<td><select data-f="${f}" class="${slug(r[f])}">${opts(list,r[f],ph)}</select></td>`;
     const rs=r.res?`style="background:hsl(${ehue(r.res)} 45% 30%);color:hsl(${ehue(r.res)} 80% 85%)"`:"";
-    h+=`<tr data-s="${shard(r.d)}" data-d="${r.d}" data-k="${r.key}"><td class="dgc"><span class="dg" draggable="true" title="Arrastrá para mover la fila">⋮⋮</span><input type="text" data-f="d" value="${fmtD(r.d)}"></td>${t("h")}${t("pat",' maxlength="8"')}${t("mod")}${t("cli")}${s("est",EST,"—")}${s("tip",TIP,"—")}${s("mot",MOT,"—")}${t("pa")}${t("mon")}<td><select data-f="res" class="${r.res?"":"empty"}" ${rs}>${opts(resp,r.res,"Responsable")}</select></td>${t("log")}<td><button class="x" data-del title="Eliminar">×</button></td></tr>`;
-  }
+    return `<tr data-s="${shard(r.d)}" data-d="${r.d}" data-k="${r.key}"><td class="dgc"><span class="dg" draggable="true" title="Arrastrá para mover la fila">⋮⋮</span><input type="text" data-f="d" value="${fmtD(r.d)}"></td>${t("h")}${t("pat",' maxlength="8"')}${t("mod")}${t("cli")}${sl("est",EST,"—")}${sl("tip",TIP,"—")}${sl("mot",MOT,"—")}${t("pa")}${t("mon")}<td><select data-f="res" class="${r.res?"":"empty"}" ${rs}>${opts(resp,r.res,"Responsable")}</select></td>${t("log")}<td><button class="x" data-del title="Eliminar">×</button></td></tr>`};
+  const groups=d3?d3.map(d=>[d,shown.filter(r=>r.d===d)]):groupBy(shown);
+  let h="";
+  for(const [d,rs] of groups)h+=`<tr class="dayg${d===efilt?" sel":""}" data-d="${d}"><td colspan="13">${dayLabel(d)}${rs.length?"":" · sin entregas"}</td></tr>`+rs.map(rowE).join("");
   tb.innerHTML=h||'<tr><td colspan="13" class="es">No hay entregas para mostrar.</td></tr>';
 }
 const ectx=e=>{const tr=e.target.closest("tr");return tr&&tr.dataset.k?[tr.dataset.s,tr.dataset.k]:null};
@@ -463,6 +473,7 @@ etb.addEventListener("click",e=>{const b=e.target;if(b.dataset.del===undefined||
   else{b.dataset.arm=1;b.textContent="¿Borrar?";b.style.fontSize="11px";b.style.color="var(--deink)";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="×";b.style.fontSize="";b.style.color=""}},3000)}});
 etb.addEventListener("focusout",()=>setTimeout(()=>{if(edirty&&!etyping()){edirty=false;erender()}},60));
 const shiftDay=n=>{const t=new Date((efilt||today())+"T12:00");t.setDate(t.getDate()+n);efilt=isoD(t);erender()};
+$("pprev").onclick=()=>{filt=addD(filt||today(),-1);render()};$("pnext").onclick=()=>{filt=addD(filt||today(),1);render()};
 $("eprev").onclick=()=>shiftDay(-1);$("enext").onclick=()=>shiftDay(1);
 $("etoday").onclick=()=>{efilt=today();erender()};$("eall").onclick=()=>{efilt="";erender()};
 $("edate").onchange=e=>{efilt=e.target.value;erender()};
@@ -515,6 +526,17 @@ dnd($("etb"),(src,tr,before)=>{
   else{const {key,...rest}=r;ES.queue(ss,sk,{del:true},0);ES.queue(ts,sk,{...rest,d:td,o,del:false},0)}
   erender();
 });
+async function permCheck(){
+  try{
+    const P=await claude.use("permissions");if(!P)return;
+    const st=await P.state("db");if(st==="granted"||st==="unavailable")return;
+    const b=$("dbb");b.hidden=false;b.textContent="";
+    const sp=document.createElement("span");sp.textContent=st==="denied"?"El permiso para guardar datos está desactivado.":"La página necesita tu permiso para leer y guardar los datos compartidos.";b.appendChild(sp);
+    const x=document.createElement("button");x.className="btn p";x.textContent=st==="denied"?"Abrir permisos":"Dar permiso";x.style.cssText="margin-left:12px;padding:8px 14px;border-radius:8px;border:0;cursor:pointer";
+    x.onclick=async()=>{try{if(st==="denied")await P.manage();else{await P.request(["db"]);b.hidden=true}}catch(e){}};
+    b.appendChild(x);
+  }catch(e){}
+}
 async function diagnose(){
  eready=true;erender();const b=$("dbb");setDb("● Sin base compartida");b.hidden=false;b.textContent="";
  const sp=document.createElement("span");b.appendChild(sp);
@@ -532,6 +554,7 @@ async function diagnose(){
  const t=setTimeout(()=>{if(!ready)msg("Conectando con la base compartida… si tarda, revisá tu conexión.")},10000);
  try{db=await (window.claude&&window.claude.use?window.claude.use("db"):null)}catch(e){db=null}
  if(!db){clearTimeout(t);try{const x=JSON.parse(localStorage.getItem(LK)||"null");if(x){Object.assign(D,x.D||{});ins=x.ins||ins;tak=x.tak||tak}}catch(e){}li.value=ins.join("\n");lt.value=tak.join("\n");ready=true;render();diagnose();return}
+ permCheck();
  db.collection("days").onSnapshot(s=>{
   for(const ch of s.docChanges()){const id=ch.doc.id;if(ch.type==="removed"){delete D[id];known[id]=false}else{D[id]=(ch.doc.data()||{}).rows||{};known[id]=true}}
   if(!ready&&!rowsOf(filt).length){const ks=Object.keys(D).filter(k=>rowsOf(k).length).sort();if(ks.length)filt=ks[ks.length-1]}ready=true;clearTimeout(t);setDb("● Base compartida conectada");if(typing())dirty=true;else render();
